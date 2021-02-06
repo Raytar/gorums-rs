@@ -89,65 +89,6 @@ impl Method for GorumsMethod<'_> {
         self.m.request_response_name(proto_path)
     }
 }
-
-struct ServiceGenerator {
-    builder: Builder,
-    clients: TokenStream,
-    servers: TokenStream,
-}
-
-impl ServiceGenerator {
-    fn new(builder: Builder) -> Self {
-        ServiceGenerator {
-            builder,
-            clients: TokenStream::default(),
-            servers: TokenStream::default(),
-        }
-    }
-}
-
-impl prost_build::ServiceGenerator for ServiceGenerator {
-    fn generate(&mut self, service: prost_build::Service, _buf: &mut String) {
-        if self.builder.build_server {
-            let server = server::generate(&GorumsService::new(&service), &self.builder.proto_path);
-            self.servers.extend(server);
-        }
-
-        if self.builder.build_client {
-            let client = client::generate(&GorumsService::new(&service), &self.builder.proto_path);
-            self.clients.extend(client);
-        }
-    }
-
-    fn finalize(&mut self, buf: &mut String) {
-        if self.builder.build_client && !self.clients.is_empty() {
-            let clients = &self.clients;
-
-            let client_service = quote::quote! {
-                #clients
-            };
-
-            let code = format!("{}", client_service);
-            buf.push_str(&code);
-
-            self.clients = TokenStream::default();
-        }
-
-        if self.builder.build_server && !self.servers.is_empty() {
-            let servers = &self.servers;
-
-            let server_service = quote::quote! {
-                #servers
-            };
-
-            let code = format!("{}", server_service);
-            buf.push_str(&code);
-
-            self.servers = TokenStream::default();
-        }
-    }
-}
-
 /**
  * The code below is copied (with slight modifications) from tonic (https://github.com/hyperium/tonic)
  * The tonic code is covered by the following copyright and permission notice:
@@ -206,6 +147,63 @@ pub fn compile_protos(proto: impl AsRef<Path>) -> io::Result<()> {
     Ok(())
 }
 
+struct ServiceGenerator {
+    builder: Builder,
+    clients: TokenStream,
+    servers: TokenStream,
+}
+
+impl ServiceGenerator {
+    fn new(builder: Builder) -> Self {
+        ServiceGenerator {
+            builder,
+            clients: TokenStream::default(),
+            servers: TokenStream::default(),
+        }
+    }
+}
+
+impl prost_build::ServiceGenerator for ServiceGenerator {
+    fn generate(&mut self, service: prost_build::Service, _buf: &mut String) {
+        if self.builder.build_server {
+            let server = server::generate(&GorumsService::new(&service), &self.builder.proto_path);
+            self.servers.extend(server);
+        }
+
+        if self.builder.build_client {
+            let client = client::generate(&GorumsService::new(&service), &self.builder.proto_path);
+            self.clients.extend(client);
+        }
+    }
+
+    fn finalize(&mut self, buf: &mut String) {
+        if self.builder.build_client && !self.clients.is_empty() {
+            let clients = &self.clients;
+
+            let client_service = quote::quote! {
+                #clients
+            };
+
+            let code = format!("{}", client_service);
+            buf.push_str(&code);
+
+            self.clients = TokenStream::default();
+        }
+
+        if self.builder.build_server && !self.servers.is_empty() {
+            let servers = &self.servers;
+
+            let server_service = quote::quote! {
+                #servers
+            };
+
+            let code = format!("{}", server_service);
+            buf.push_str(&code);
+
+            self.servers = TokenStream::default();
+        }
+    }
+}
 /// Service generator builder.
 #[derive(Debug, Clone)]
 pub struct Builder {
