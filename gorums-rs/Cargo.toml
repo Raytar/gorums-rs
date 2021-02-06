@@ -1,0 +1,24 @@
+[package]
+name = "gorums-rs"
+version = "0.1.0"
+authors = ["John Ingve Olsen <johningveolsen@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tonic = "0.4"
+prost = "0.7"
+prost-types = "0.7"
+futures-core = "0.3"
+futures-util = "0.3"
+tokio = { version = "1.2.0", features = ["rt-multi-thread", "macros", "sync", "time"] }
+bytes = "1"
+
+[build-dependencies]
+tonic= "0.4"
+tonic-build = { version = "0.4", features = ["rustfmt"] }
+prost-build = "0.7"
+quote = "1.0"
+proc-macro2 = "1.0"
+syn = "1.0"
