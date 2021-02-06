@@ -1,48 +1,15 @@
-fn main() {
-    configure()
-        .build_server(true)
-        .build_client(false)
-        .compile(&["gorums.proto"], &["proto"])
-        .unwrap();
-}
-
 use proc_macro2::TokenStream;
 use prost_build::{Config, Method as ProstMethod, Service as ProstService};
 use std::io;
 use std::path::{Path, PathBuf};
 use tonic_build::{client, server, Method, Service};
 
-/// Configure `tonic-build` code generation.
-///
-/// Use [`compile_protos`] instead if you don't need to tweak anything.
-pub fn configure() -> Builder {
-    Builder {
-        build_client: true,
-        build_server: true,
-        out_dir: None,
-        extern_path: Vec::new(),
-        field_attributes: Vec::new(),
-        type_attributes: Vec::new(),
-        proto_path: "super".to_string(),
-        format: true,
-    }
-}
-
-/// Simple `.proto` compiling. Use [`configure`] instead if you need more options.
-///
-/// The include directory will be the parent folder of the specified path.
-/// The package name will be the filename without the extension.
-pub fn compile_protos(proto: impl AsRef<Path>) -> io::Result<()> {
-    let proto_path: &Path = proto.as_ref();
-
-    // directory the main .proto file resides in
-    let proto_dir = proto_path
-        .parent()
-        .expect("proto file should reside in a directory");
-
-    self::configure().compile(&[proto_path], &[proto_dir])?;
-
-    Ok(())
+fn main() {
+    configure()
+        .build_server(true)
+        .build_client(false)
+        .compile(&["gorums.proto"], &["proto"])
+        .unwrap();
 }
 
 const GORUMS_CODEC_PATH: &str = "crate::codec::GorumsCodec";
@@ -179,6 +146,64 @@ impl prost_build::ServiceGenerator for ServiceGenerator {
             self.servers = TokenStream::default();
         }
     }
+}
+
+/**
+ * The code below is copied (with slight modifications) from tonic (https://github.com/hyperium/tonic)
+ * The tonic code is covered by the following copyright and permission notice:
+ *
+ * Copyright (c) 2020 Lucio Franco
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/// Configure `tonic-build` code generation.
+///
+/// Use [`compile_protos`] instead if you don't need to tweak anything.
+pub fn configure() -> Builder {
+    Builder {
+        build_client: true,
+        build_server: true,
+        out_dir: None,
+        extern_path: Vec::new(),
+        field_attributes: Vec::new(),
+        type_attributes: Vec::new(),
+        proto_path: "super".to_string(),
+        format: true,
+    }
+}
+
+/// Simple `.proto` compiling. Use [`configure`] instead if you need more options.
+///
+/// The include directory will be the parent folder of the specified path.
+/// The package name will be the filename without the extension.
+pub fn compile_protos(proto: impl AsRef<Path>) -> io::Result<()> {
+    let proto_path: &Path = proto.as_ref();
+
+    // directory the main .proto file resides in
+    let proto_dir = proto_path
+        .parent()
+        .expect("proto file should reside in a directory");
+
+    self::configure().compile(&[proto_path], &[proto_dir])?;
+
+    Ok(())
 }
 
 /// Service generator builder.
