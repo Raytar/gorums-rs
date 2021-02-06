@@ -15,11 +15,13 @@ impl Message for Metadata {
     // not sure what else to put here
     type Item = Metadata;
 
-    fn get_metadata(&self) -> &Metadata {
-        return self;
+    fn get_metadata(&self) -> Metadata {
+        let mut md = self.clone();
+        md.message = Vec::new();
+        md
     }
 
     fn get_message(&self) -> &Vec<u8> {
-        return &self.message;
+        &self.message
     }
 }

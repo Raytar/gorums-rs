@@ -7,7 +7,9 @@ use proto::gorums::Metadata;
 pub trait Message {
     type Item: prost::Message;
 
-    fn get_metadata(&self) -> &Metadata;
+    // Returns the metadata (without the message)
+    fn get_metadata(&self) -> Metadata;
+    // Returns the message
     fn get_message(&self) -> &Vec<u8>;
 }
 
