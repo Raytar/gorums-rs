@@ -17,17 +17,17 @@ pub struct GorumsServiceBuilder {
 }
 
 impl GorumsServiceBuilder {
-    fn new() -> Self {
+    pub fn new() -> Self {
         GorumsServiceBuilder {
             methods: HashMap::new(),
         }
     }
 
-    fn add_handler(&mut self, method: String, handler: Handler) {
+    pub fn add_handler(&mut self, method: String, handler: Handler) {
         self.methods.insert(method, handler);
     }
 
-    fn build(self) -> GorumsService {
+    pub fn build(self) -> GorumsService {
         GorumsService {
             methods: Arc::new(self.methods),
         }
