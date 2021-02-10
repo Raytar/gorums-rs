@@ -90,6 +90,7 @@ impl Decoder for GorumsDecoder {
 #[cfg(test)]
 mod tests {
     use bytes::{Bytes, BytesMut};
+    use prost::Message;
 
     use super::*;
     use crate::proto::gorums::Metadata;
@@ -112,19 +113,20 @@ mod tests {
 
     #[test]
     fn decode() {
-        // message encoded by gorums: id=1, method=foo, message=nil
-        let raw_msg: &[u8] = &[7, 8, 1, 18, 3, 102, 111, 111, 0];
+        // message encoded by gorums: Metadata{id=1, method=foo}, message=Metadata{id=2, method=bar}
+        let raw_msg: &[u8] = &[7, 8, 1, 18, 3, 102, 111, 111, 7, 8, 2, 18, 3, 98, 97, 114];
         let mut buf = Bytes::from(raw_msg);
         let mut codec = GorumsCodec::default();
 
-        let result = codec.decoder().decode_msg(&mut buf);
+        let md = codec.decoder().decode_msg(&mut buf).unwrap();
+        // try to decode the payload message, which in this case happens to be a metadata message.
+        let mut msg_buf = Bytes::from(md.message);
+        let msg = Metadata::decode(&mut msg_buf).unwrap();
 
-        assert!(result.is_ok());
-        let msg = result.unwrap();
-        assert_eq!(1, msg.message_id);
-        assert_eq!("foo", msg.method);
-        assert_eq!(Vec::<u8>::new(), msg.message);
-        assert_eq!(None, msg.status);
+        assert_eq!(1, md.message_id);
+        assert_eq!("foo", md.method);
+        assert_eq!(2, msg.message_id);
+        assert_eq!("bar", msg.method);
     }
 
     #[test]

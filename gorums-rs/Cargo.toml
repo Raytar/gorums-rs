@@ -18,7 +18,7 @@ async-stream = "0.3"
 
 [build-dependencies]
 tonic= "0.4"
-tonic-build = { version = "0.4", features = ["rustfmt"] }
+tonic-build = { version = "0.4", features = ["rustfmt", "prost"] }
 prost-build = "0.7"
 quote = "1.0"
 proc-macro2 = "1.0"
