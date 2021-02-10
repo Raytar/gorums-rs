@@ -2,7 +2,6 @@ extern crate bytes;
 
 use bytes::{Buf, BufMut};
 use prost::encoding::*;
-use prost::DecodeError;
 use prost::Message as ProstMessage;
 use tonic::codec::*;
 use tonic::{Code, Status};
@@ -32,43 +31,119 @@ impl Codec for GorumsCodec {
 #[derive(Debug, Clone, Default)]
 pub struct GorumsEncoder {}
 
-impl Encoder for GorumsEncoder {
-    type Item = Metadata;
-    type Error = Status;
-
-    fn encode(&mut self, item: Self::Item, buf: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
-        let md = item.get_metadata();
+impl GorumsEncoder {
+    fn encode_msg(
+        &mut self,
+        msg: Metadata,
+        buf: &mut impl BufMut,
+    ) -> Result<(), prost::EncodeError> {
+        let md = msg.get_metadata();
         encode_varint(md.encoded_len() as u64, buf);
         md.encode(buf)
             .expect("Message only errors if not enough space");
 
-        let msg = item.get_message();
+        let msg = msg.get_message();
         encode_varint(msg.encoded_len() as u64, buf);
         buf.put_slice(msg);
         Ok(())
     }
 }
 
+impl Encoder for GorumsEncoder {
+    type Item = Metadata;
+    type Error = Status;
+
+    fn encode(&mut self, item: Self::Item, buf: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
+        self.encode_msg(item, buf)
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct GorumsDecoder {}
+
+impl GorumsDecoder {
+    fn decode_msg(&mut self, buf: &mut impl Buf) -> Result<Metadata, prost::DecodeError> {
+        let md_len = decode_varint(buf)?;
+        let md_buf = buf.take(md_len as usize);
+        let mut md = Metadata::decode(md_buf)?;
+
+        let msg_len = decode_varint(buf)?;
+        let msg_buf = buf.take(msg_len as usize);
+        md.message = msg_buf.chunk().to_vec(); // will be decoded by handler later
+
+        Ok(md)
+    }
+}
 
 impl Decoder for GorumsDecoder {
     type Item = Metadata;
     type Error = Status;
 
     fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
-        let md_len = decode_varint(src).map_err(from_decode_error)?;
-        let md_buf = src.take(md_len as usize);
-        let mut md = Metadata::decode(md_buf).map_err(from_decode_error)?;
-
-        let msg_len = decode_varint(src).map_err(from_decode_error)?;
-        let msg_buf = src.take(msg_len as usize);
-        md.message = msg_buf.chunk().to_vec(); // will be decoded by handler later
-
-        Ok(Some(md))
+        self.decode_msg(src)
+            .map(|msg| Some(msg))
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))
     }
 }
 
-fn from_decode_error(error: DecodeError) -> Status {
-    Status::new(Code::Internal, error.to_string())
+#[cfg(test)]
+mod tests {
+    use bytes::{Bytes, BytesMut};
+
+    use super::*;
+    use crate::proto::gorums::Metadata;
+
+    #[test]
+    fn encode() {
+        let md = Metadata {
+            message_id: 1,
+            method: "foo".to_string(),
+            message: "bar".as_bytes().to_vec(),
+            status: None,
+        };
+        let mut buf = BytesMut::new();
+        let mut codec = GorumsCodec::default();
+
+        let result = codec.encoder().encode_msg(md.clone(), &mut buf);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn decode() {
+        // message encoded by gorums: id=1, method=foo, message=nil
+        let raw_msg: &[u8] = &[7, 8, 1, 18, 3, 102, 111, 111, 0];
+        let mut buf = Bytes::from(raw_msg);
+        let mut codec = GorumsCodec::default();
+
+        let result = codec.decoder().decode_msg(&mut buf);
+
+        assert!(result.is_ok());
+        let msg = result.unwrap();
+        assert_eq!(1, msg.message_id);
+        assert_eq!("foo", msg.method);
+        assert_eq!(Vec::<u8>::new(), msg.message);
+        assert_eq!(None, msg.status);
+    }
+
+    #[test]
+    fn encode_and_decode() {
+        let md = Metadata {
+            message_id: 1,
+            method: "foo".to_string(),
+            message: "bar".as_bytes().to_vec(),
+            status: None,
+        };
+        let mut buf = BytesMut::new();
+        let mut codec = GorumsCodec::default();
+
+        let encode_result = codec.encoder().encode_msg(md.clone(), &mut buf);
+        assert!(encode_result.is_ok());
+        let decode_result = codec.decoder().decode_msg(&mut buf);
+        assert!(decode_result.is_ok());
+
+        let decoded_msg = decode_result.unwrap();
+        assert_eq!(md, decoded_msg);
+    }
 }
