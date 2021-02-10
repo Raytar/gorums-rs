@@ -1,5 +1,5 @@
 pub mod codec;
-mod proto;
+pub mod proto;
 pub mod server;
 
 use proto::gorums::Metadata;

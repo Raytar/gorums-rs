@@ -1,4 +1,4 @@
-pub mod google {
+mod google {
     pub mod rpc {
         tonic::include_proto!("google.rpc");
     }
